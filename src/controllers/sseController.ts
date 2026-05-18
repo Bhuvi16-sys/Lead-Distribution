@@ -1,0 +1,25 @@
+import { eventEmitter } from '@/lib/events';
+
+export const handleSSEConnection = async (req: Request) => {
+  const stream = new ReadableStream({
+    start(controller) {
+      const listener = () => {
+        controller.enqueue(new TextEncoder().encode(`data: update\n\n`));
+      };
+      
+      eventEmitter.on('new_lead_assignment', listener);
+      
+      req.signal.addEventListener('abort', () => {
+        eventEmitter.off('new_lead_assignment', listener);
+      });
+    }
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+    },
+  });
+};
